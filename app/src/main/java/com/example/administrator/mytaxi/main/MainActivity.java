@@ -13,9 +13,9 @@ import android.widget.Toast;
 
 import com.example.administrator.mytaxi.MyApplication;
 import com.example.administrator.mytaxi.R;
-import com.example.administrator.mytaxi.account.view.PhoneInputDialog;
 import com.example.administrator.mytaxi.account.model.response.Account;
 import com.example.administrator.mytaxi.account.model.response.LoginResponse;
+import com.example.administrator.mytaxi.account.view.PhoneInputDialog;
 import com.example.administrator.mytaxi.common.http.IHttpClient;
 import com.example.administrator.mytaxi.common.http.IRequest;
 import com.example.administrator.mytaxi.common.http.IResponse;
@@ -36,6 +36,28 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+//        Observable.just("dalimao")
+//                .subscribeOn(Schedulers.io()) // 指定下一个产生的线程节点在 IO 线程中处理
+//                .map(new Func1<String, User>() {
+//                    @Override
+//                    public User call(String name) {
+//                        User user = new User();
+//                        user.setName(name);
+//                        System.out.println("process User call in tread:" +
+//                                Thread.currentThread().getName());
+//                        return user;
+//                    }
+//                })
+//                .observeOn(AndroidSchedulers.mainThread()) // 指定消费节点在 Main 线程
+//                .subscribe(new Action1<Object>() {
+//                    @Override
+//                    public void call(Object data) {
+//
+//                        System.out.println("receive User call in tread:"
+//                                + Thread.currentThread().getName());
+//                    }
+//                });
         mHttpClient =  new OkHttpClientImpl();
         requestPermission();
         checkLoginState();
