@@ -75,6 +75,6 @@ public class CreatePasswordDialogPresenterImpl implements ICreatePasswordDialogP
 
     @Override
     public void requestLogin(String phone, String pw) {
-        accountManager.login(phone,pw);
+        accountManager.login(phone,pw,null);
     }
 }

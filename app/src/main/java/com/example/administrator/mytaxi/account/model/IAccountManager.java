@@ -62,7 +62,7 @@ public interface IAccountManager {
     /**
      *  登录
      */
-    void login(String phone, String password);
+    void login(String phone, String password, AccountManagerImpl.LoginCallback callback);
 
     /**
      * token 登录

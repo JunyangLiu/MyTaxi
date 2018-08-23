@@ -14,19 +14,10 @@ import android.widget.Toast;
 import com.example.administrator.mytaxi.MyApplication;
 import com.example.administrator.mytaxi.R;
 import com.example.administrator.mytaxi.account.model.response.Account;
-import com.example.administrator.mytaxi.account.model.response.LoginResponse;
 import com.example.administrator.mytaxi.account.view.PhoneInputDialog;
 import com.example.administrator.mytaxi.common.http.IHttpClient;
-import com.example.administrator.mytaxi.common.http.IRequest;
-import com.example.administrator.mytaxi.common.http.IResponse;
-import com.example.administrator.mytaxi.common.http.Impl.BaseRequest;
-import com.example.administrator.mytaxi.common.http.Impl.BaseResponse;
 import com.example.administrator.mytaxi.common.http.Impl.OkHttpClientImpl;
-import com.example.administrator.mytaxi.common.http.api.API;
-import com.example.administrator.mytaxi.common.http.biz.BaseBizResponse;
 import com.example.administrator.mytaxi.common.storage.SharedPreferencesDao;
-import com.example.administrator.mytaxi.common.util.ToastUtil;
-import com.google.gson.Gson;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,27 +28,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-//        Observable.just("dalimao")
-//                .subscribeOn(Schedulers.io()) // 指定下一个产生的线程节点在 IO 线程中处理
-//                .map(new Func1<String, User>() {
-//                    @Override
-//                    public User call(String name) {
-//                        User user = new User();
-//                        user.setName(name);
-//                        System.out.println("process User call in tread:" +
-//                                Thread.currentThread().getName());
-//                        return user;
-//                    }
-//                })
-//                .observeOn(AndroidSchedulers.mainThread()) // 指定消费节点在 Main 线程
-//                .subscribe(new Action1<Object>() {
-//                    @Override
-//                    public void call(Object data) {
-//
-//                        System.out.println("receive User call in tread:"
-//                                + Thread.currentThread().getName());
-//                    }
-//                });
+
         mHttpClient =  new OkHttpClientImpl();
         requestPermission();
         checkLoginState();
@@ -89,69 +60,69 @@ public class MainActivity extends AppCompatActivity {
             }
         }
 
-        if(!tokenValid){
+//        if(!tokenValid){
             //token过期跳转输入电话号码界面
             showPhoneInputDialog();
-        }else{
-            new Thread(){
-                @Override
-                public void run() {
-                    //用token 登录
-                    String url= API.Config.getDomain()+API.LOGIN_BY_TOKEN;
-                    IRequest request=new BaseRequest(url);
-                    request.setBody("token",account.getToken());
-                    IResponse response=mHttpClient.get(request,false);
-                    Log.d(TAG, response.getData());
-                    Log.d("jun", TAG+" code:"+response.getCode()+" data:"+response.getData());
-
-                    //请求成功
-                    if (response.getCode() == BaseResponse.STATE_OK) {
-                        Log.d("jun", "登录请求成功");
-                        LoginResponse bizRes =
-                                new Gson().fromJson(response.getData(), LoginResponse.class);
-                        Log.d("jun", TAG+" code:"+bizRes.getCode()+" data:"+bizRes.getData()+" msg:"+bizRes.getMsg());
-                        //登录成功
-                        if (bizRes.getCode() == BaseBizResponse.STATE_OK) {
-                            Log.d("jun", TAG+" 登陆成功");
-                            // 保存登录信息
-                            Account account =  bizRes.getData();
-                            // todo: 加密存储
-                            SharedPreferencesDao dao =
-                                    new SharedPreferencesDao(MyApplication.getInstance(),
-                                            SharedPreferencesDao.FILE_ACCOUNT);
-                            dao.save(SharedPreferencesDao.KEY_ACCOUNT, account);
-
-                            // 通知 UI
-                            MainActivity.this.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    ToastUtil.show(MainActivity.this,
-                                            getString(R.string.login_suc));
-                                }
-                            });
-                        }
-                        if(bizRes.getCode() == BaseBizResponse.STATE_TOKEN_INVALID) {
-                            MainActivity.this.runOnUiThread(new Runnable() {
-                                @Override
-                                public void run() {
-                                    showPhoneInputDialog();
-                                }
-                            });
-                        }
-                    }else{
-                        //请求失败
-                        MainActivity.this.runOnUiThread(new Runnable() {
-                            @Override
-                            public void run() {
-                                ToastUtil.show(MainActivity.this,
-                                        getString(R.string.error_server));
-                            }
-                        });
-                    }
-
-                }
-            }.start();
-        }
+//        }else{
+//            new Thread(){
+//                @Override
+//                public void run() {
+//                    //用token 登录
+//                    String url= API.Config.getDomain()+API.LOGIN_BY_TOKEN;
+//                    IRequest request=new BaseRequest(url);
+//                    request.setBody("token",account.getToken());
+//                    IResponse response=mHttpClient.get(request,false);
+//                    Log.d(TAG, response.getData());
+//                    Log.d("jun", TAG+" code:"+response.getCode()+" data:"+response.getData());
+//
+//                    //请求成功
+//                    if (response.getCode() == BaseResponse.STATE_OK) {
+//                        Log.d("jun", "登录请求成功");
+//                        LoginResponse bizRes =
+//                                new Gson().fromJson(response.getData(), LoginResponse.class);
+//                        Log.d("jun", TAG+" code:"+bizRes.getCode()+" data:"+bizRes.getData()+" msg:"+bizRes.getMsg());
+//                        //登录成功
+//                        if (bizRes.getCode() == BaseBizResponse.STATE_OK) {
+//                            Log.d("jun", TAG+" 登陆成功");
+//                            // 保存登录信息
+//                            Account account =  bizRes.getData();
+//                            // todo: 加密存储
+//                            SharedPreferencesDao dao =
+//                                    new SharedPreferencesDao(MyApplication.getInstance(),
+//                                            SharedPreferencesDao.FILE_ACCOUNT);
+//                            dao.save(SharedPreferencesDao.KEY_ACCOUNT, account);
+//
+//                            // 通知 UI
+//                            MainActivity.this.runOnUiThread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    ToastUtil.show(MainActivity.this,
+//                                            getString(R.string.login_suc));
+//                                }
+//                            });
+//                        }
+//                        if(bizRes.getCode() == BaseBizResponse.STATE_TOKEN_INVALID) {
+//                            MainActivity.this.runOnUiThread(new Runnable() {
+//                                @Override
+//                                public void run() {
+//                                    showPhoneInputDialog();
+//                                }
+//                            });
+//                        }
+//                    }else{
+//                        //请求失败
+//                        MainActivity.this.runOnUiThread(new Runnable() {
+//                            @Override
+//                            public void run() {
+//                                ToastUtil.show(MainActivity.this,
+//                                        getString(R.string.error_server));
+//                            }
+//                        });
+//                    }
+//
+//                }
+//            }.start();
+//        }
 
     }
     /**

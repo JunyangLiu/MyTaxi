@@ -2,6 +2,7 @@ package com.example.administrator.mytaxi.account.model.response;
 
 /**
  * Created by Administrator on 2018/4/18.
+ * 短信验证返回的response
  */
 
 public class MsgVerifyResponse {

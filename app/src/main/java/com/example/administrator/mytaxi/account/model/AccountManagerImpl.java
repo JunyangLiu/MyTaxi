@@ -8,16 +8,30 @@ import com.example.administrator.mytaxi.account.model.response.Account;
 import com.example.administrator.mytaxi.account.model.response.LoginResponse;
 import com.example.administrator.mytaxi.account.model.response.MsgResponse;
 import com.example.administrator.mytaxi.account.model.response.MsgVerifyResponse;
+import com.example.administrator.mytaxi.account.model.response.User;
 import com.example.administrator.mytaxi.common.http.IHttpClient;
 import com.example.administrator.mytaxi.common.http.IRequest;
 import com.example.administrator.mytaxi.common.http.IResponse;
 import com.example.administrator.mytaxi.common.http.Impl.BaseRequest;
 import com.example.administrator.mytaxi.common.http.Impl.BaseResponse;
 import com.example.administrator.mytaxi.common.http.api.API;
+import com.example.administrator.mytaxi.common.http.api.AccountApi;
 import com.example.administrator.mytaxi.common.http.biz.BaseBizResponse;
 import com.example.administrator.mytaxi.common.storage.SharedPreferencesDao;
 import com.example.administrator.mytaxi.common.util.DevUtil;
 import com.google.gson.Gson;
+
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.CompositeDisposable;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
+import okhttp3.OkHttpClient;
+import retrofit2.CallAdapter;
+import retrofit2.Converter;
+import retrofit2.Retrofit;
+import retrofit2.adapter.rxjava2.RxJava2CallAdapterFactory;
+import retrofit2.converter.gson.GsonConverterFactory;
 
 /**
  * Created by Administrator on 2018/4/20.
@@ -25,6 +39,7 @@ import com.google.gson.Gson;
  */
 
 public class AccountManagerImpl implements IAccountManager {
+    private static AccountApi accountApi;
     private static final String TAG = "AccountManagerImpl";
     //网络请求库
     private IHttpClient mHttpClient;
@@ -32,10 +47,29 @@ public class AccountManagerImpl implements IAccountManager {
     private SharedPreferencesDao sharedPreferencesDao;
     //发送消息handler
     private Handler mHandler;
+    private CompositeDisposable compositeDisposable;
 
+    private static OkHttpClient okHttpClient = new OkHttpClient();
+    private static Converter.Factory gsonConverterFactory = GsonConverterFactory.create();
+    private static CallAdapter.Factory rxJavaCallAdapterFactory = RxJava2CallAdapterFactory.create();
+
+    public static AccountApi getLoginApi() {
+        if (accountApi == null) {
+            Retrofit retrofit = new Retrofit.Builder()
+                    .client(okHttpClient)
+                    .baseUrl(API.Config.getDomain())
+                    .addConverterFactory(gsonConverterFactory)
+                    .addCallAdapterFactory(rxJavaCallAdapterFactory)
+                    .build();
+            Log.d("jun", "【看这里】retrofit.baseUrl()"+String.valueOf(retrofit.baseUrl()));
+            accountApi = retrofit.create(AccountApi.class);
+        }
+        return accountApi;
+    }
     public AccountManagerImpl(IHttpClient httpClient, SharedPreferencesDao sharedPreferencesDao) {
         this.mHttpClient = httpClient;
         this.sharedPreferencesDao = sharedPreferencesDao;
+        compositeDisposable = new CompositeDisposable();
     }
 
     @Override
@@ -184,45 +218,36 @@ public class AccountManagerImpl implements IAccountManager {
         }.start();
 
     }
+    public static class LoginCallback{
+        public void onResponse(LoginResponse loginResponse) {}
+        public void onError() {}
+    }
+    private LoginCallback loginCallback;
+
 
     @Override
-    public void login(final String phone,final String password) {
-        //  网络请求登录
-        new Thread() {
-            @Override
-            public void run() {
-                String url = API.Config.getDomain() + API.LOGIN;
-                IRequest request = new BaseRequest(url);
-                request.setBody("phone", phone);
-                request.setBody("password", password);
+    public void login(final String phone, final String password, final LoginCallback loginCallback) {
+        this.loginCallback = loginCallback;
+//
 
 
-                IResponse data = mHttpClient.post(request, false);
-                Log.d("jun","登录 response.getCode()"+data.getCode());
-                Log.d("jun","登录 response.getData()"+data.getData());
-                LoginResponse response=new Gson().fromJson(data.getData(),LoginResponse.class);
-
-                if (response.getCode() == BaseResponse.STATE_OK) {
 
 
-                    // 保存登录信息
-                    Account account = response.getData();
-                    // todo: 加密存储
-                    SharedPreferencesDao dao =
-                            new SharedPreferencesDao(MyApplication.getInstance(),
-                                    SharedPreferencesDao.FILE_ACCOUNT);
-                    dao.save(SharedPreferencesDao.KEY_ACCOUNT, account);
+        Disposable disposable=getLoginApi().login(new User(phone,password))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<LoginResponse>() {
+                    @Override
+                    public void accept(LoginResponse loginResponse) throws Exception {
+                        loginCallback.onResponse(loginResponse);
+                    }
+                }, new Consumer<Throwable>() {
+                    @Override
+                    public void accept(Throwable throwable) throws Exception {
+                        loginCallback.onError();
 
-                    // 通知 UI
-                    mHandler.sendEmptyMessage(LOGIN_SUC);
-
-
-                } else {
-                    mHandler.sendEmptyMessage(SERVER_FAIL);
-                }
-
-            }
-        }.start();
+                    }
+                });
     }
 
     @Override
