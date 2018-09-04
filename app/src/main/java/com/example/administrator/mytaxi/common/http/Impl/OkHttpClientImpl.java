@@ -65,6 +65,7 @@ public class OkHttpClientImpl implements IHttpClient {
         builder.url(request.getUrl())
                 .post(body);
         Request oKRequest = builder.build();
+        Log.d("jun","【IResponse post】"+oKRequest.url().url().toString()+oKRequest.url());
         return  execute(oKRequest);
     }
     /**
@@ -73,7 +74,7 @@ public class OkHttpClientImpl implements IHttpClient {
      * @return
      */
     private IResponse execute(Request request)  {
-        BaseResponse commonResponse=new BaseResponse();
+        BaResponse commonResponse= new BaResponse();
         //设置状态码
         try {
             Response response=mOkHttpClient.newCall(request).execute();

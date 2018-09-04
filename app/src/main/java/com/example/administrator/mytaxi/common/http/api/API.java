@@ -12,10 +12,12 @@ public class API {
 
     // 获取验证码
     public static final String GET_SMS_CODE =
-            "/f34e28da5816433d/getMsgCode?phone=${phone}";
+            "/f34e28da5816433d/getMsgCode";
     // 校验验证码
+//    public static final String CHECK_SMS_CODE =
+//            "/f34e28da5816433d/checkMsgCode?phone=${phone}&code=${code}" ;
     public static final String CHECK_SMS_CODE =
-            "/f34e28da5816433d/checkMsgCode?phone=${phone}&code=${code}" ;
+            "/f34e28da5816433d/checkMsgCode" ;
     // 注册
     public static final String REGISTER = "/f34e28da5816433d/register";
     // 登录
@@ -25,8 +27,12 @@ public class API {
     public static final String LOGIN_BY_TOKEN = "/f34e28da5816433d/login";
 
     // 检查用户是否存在
-    public static String CHECK_USER_EXIST =
-            "/f34e28da5816433d/isUserExist?phone=${phone}";
+//    public static final String CHECK_USER_EXIST =
+//            "/f34e28da5816433d/isUserExist?phone=${phone}";
+    // 检查用户是否存在
+    public static final String CHECK_USER_EXIST =
+            "/f34e28da5816433d/isUserExist";
+
 
     /**
      *  配置域名信息

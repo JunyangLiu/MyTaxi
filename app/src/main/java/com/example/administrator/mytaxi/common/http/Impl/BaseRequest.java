@@ -65,7 +65,7 @@ public class BaseRequest implements IRequest {
     public Object getBody() {
         if (body != null) {
             // 组装 POST 方法请求参数
-            Log.d("jun","POST的url："+ new Gson().toJson(this.body, HashMap.class));
+            Log.d("jun","POST的body："+ new Gson().toJson(this.body, HashMap.class));
             return new Gson().toJson(this.body, HashMap.class);
         } else {
             return  "{}";

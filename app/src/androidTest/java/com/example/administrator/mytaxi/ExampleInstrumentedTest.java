@@ -5,7 +5,7 @@ import android.support.test.InstrumentationRegistry;
 import android.support.test.runner.AndroidJUnit4;
 import android.util.Log;
 
-import com.example.administrator.mytaxi.account.model.response.LoginResponse;
+import com.example.administrator.mytaxi.account.model.response.BaseResponse;
 import com.example.administrator.mytaxi.common.http.Network;
 
 import org.junit.Test;
@@ -36,12 +36,12 @@ public class ExampleInstrumentedTest {
         Network.getLoginApi().login()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<LoginResponse>() {
+                .subscribe(new Consumer<BaseResponse>() {
                     @Override
-                    public void accept(LoginResponse loginResponse) throws Exception {
-                        System.out.print("【重要】loginResponse看这里！！！！"+loginResponse.getMsg()+" "+loginResponse.getCode()+" "+loginResponse.getData());
+                    public void accept(BaseResponse baseResponse) throws Exception {
+                        System.out.print("【重要】loginResponse看这里！！！！"+ baseResponse.getMsg()+" "+ baseResponse.getCode()+" "+ baseResponse.getData());
 
-                        Log.d("jun","【重要】loginResponse看这里！！！！"+loginResponse.getMsg()+" "+loginResponse.getCode()+" "+loginResponse.getData());
+                        Log.d("jun","【重要】loginResponse看这里！！！！"+ baseResponse.getMsg()+" "+ baseResponse.getCode()+" "+ baseResponse.getData());
                     }
                 }, new Consumer<Throwable>() {
                     @Override
@@ -50,11 +50,11 @@ public class ExampleInstrumentedTest {
                         System.out.print("【重要】throwable看这里！！！！"+throwable.getMessage());
                     }
                 });
-//        Call<LoginResponse> response = Network.getLoginApi().loginFotData();
-//        response.enqueue(new Callback<LoginResponse>() {
+//        Call<BaResponse> response = Network.getLoginApi().loginFotData();
+//        response.enqueue(new Callback<BaResponse>() {
 //            @Override
-//            public void onResponse(Call<LoginResponse> call, Response<LoginResponse> response) {
-////                LoginResponse loginResponse = response.raw();
+//            public void onResponse(Call<BaResponse> call, Response<BaResponse> response) {
+////                BaResponse loginResponse = response.raw();
 ////                Log.d("jun","【重要】loginResponse看这里！！！！"+loginResponse.getMsg()+" "+loginResponse.getCode()+" "+loginResponse.getData());
 //
 //                Log.d("jun","【重要】onResponse！！！！"+response.message()+"  "+response.body()+"  "+response.raw());
@@ -63,7 +63,7 @@ public class ExampleInstrumentedTest {
 //            }
 //
 //            @Override
-//            public void onFailure(Call<LoginResponse> call, Throwable t) {
+//            public void onFailure(Call<BaResponse> call, Throwable t) {
 //                Log.d("jun","【重要】onFailure！！！！"+"  "+t.getMessage());
 //            }
 //        });

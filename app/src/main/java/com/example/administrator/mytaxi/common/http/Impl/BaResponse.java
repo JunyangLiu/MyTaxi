@@ -6,7 +6,7 @@ import com.example.administrator.mytaxi.common.http.IResponse;
  * Created by Administrator on 2018/4/13.
  */
 
-public class BaseResponse implements IResponse {
+public class BaResponse implements IResponse {
     public static final int STATE_UNKNOWN_ERROR = 100001;
     public static final int STATE_OK = 200;
     // 状态码

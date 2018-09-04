@@ -5,6 +5,7 @@ import android.content.Context;
 import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.support.annotation.StyleRes;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.Button;
@@ -85,6 +86,7 @@ public class CreatePasswordDialog extends Dialog implements ICreatePasswordDialo
         mBtnConfirm.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                Log.d("jun","CreatePasswordDialog onClick");
                 register();
             }
         });
@@ -137,7 +139,8 @@ public class CreatePasswordDialog extends Dialog implements ICreatePasswordDialo
         String password1 = mPw1.getText().toString();
         boolean check = presenter.checkPw(password, password1);
         if (check) {
-            presenter.requestRegister(mPhoneStr, password1);
+            Log.d("jun","CreatePasswordDialog register");
+            presenter.requestRegister(mPhoneStr, password);
         }
     }
 

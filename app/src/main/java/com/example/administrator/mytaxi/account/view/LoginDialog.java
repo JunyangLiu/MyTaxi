@@ -14,7 +14,7 @@ import android.widget.TextView;
 import com.example.administrator.mytaxi.R;
 import com.example.administrator.mytaxi.account.model.IAccountManager;
 import com.example.administrator.mytaxi.account.presenter.ILoginDialogPresenter;
-import com.example.administrator.mytaxi.account.presenter.ILoginDialogPresenterImpl;
+import com.example.administrator.mytaxi.account.presenter.LoginDialogPresenterImpl;
 import com.example.administrator.mytaxi.common.util.ToastUtil;
 
 /**
@@ -40,7 +40,7 @@ public class LoginDialog extends Dialog implements ILoginView{
     public LoginDialog(Context context, String phone) {
         this(context, R.style.Dialog);
         mPhoneStr = phone;
-        presenter=new ILoginDialogPresenterImpl(this);
+        presenter=new LoginDialogPresenterImpl(this);
     }
 
     public LoginDialog(@NonNull Context context, @StyleRes int themeResId) {

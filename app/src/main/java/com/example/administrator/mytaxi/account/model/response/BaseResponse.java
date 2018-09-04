@@ -2,10 +2,10 @@ package com.example.administrator.mytaxi.account.model.response;
 
 /**
  * Created by Jun on 2018/4/17
- * 登录请求返回的response
+ * 最基本的response
  */
 
-public class LoginResponse  {
+public class BaseResponse {
     int code;
     Account data;
     String msg;

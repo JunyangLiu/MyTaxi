@@ -1,29 +1,17 @@
 package com.example.administrator.mytaxi.account.model;
 
-import android.os.Handler;
 import android.util.Log;
 
 import com.example.administrator.mytaxi.MyApplication;
 import com.example.administrator.mytaxi.account.model.response.Account;
-import com.example.administrator.mytaxi.account.model.response.LoginResponse;
-import com.example.administrator.mytaxi.account.model.response.MsgResponse;
-import com.example.administrator.mytaxi.account.model.response.MsgVerifyResponse;
-import com.example.administrator.mytaxi.account.model.response.User;
-import com.example.administrator.mytaxi.common.http.IHttpClient;
-import com.example.administrator.mytaxi.common.http.IRequest;
-import com.example.administrator.mytaxi.common.http.IResponse;
-import com.example.administrator.mytaxi.common.http.Impl.BaseRequest;
-import com.example.administrator.mytaxi.common.http.Impl.BaseResponse;
+import com.example.administrator.mytaxi.account.model.response.BaseResponse;
 import com.example.administrator.mytaxi.common.http.api.API;
 import com.example.administrator.mytaxi.common.http.api.AccountApi;
-import com.example.administrator.mytaxi.common.http.biz.BaseBizResponse;
 import com.example.administrator.mytaxi.common.storage.SharedPreferencesDao;
 import com.example.administrator.mytaxi.common.util.DevUtil;
-import com.google.gson.Gson;
 
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.CompositeDisposable;
-import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import okhttp3.OkHttpClient;
@@ -41,19 +29,20 @@ import retrofit2.converter.gson.GsonConverterFactory;
 public class AccountManagerImpl implements IAccountManager {
     private static AccountApi accountApi;
     private static final String TAG = "AccountManagerImpl";
-    //网络请求库
-    private IHttpClient mHttpClient;
     //数据储存
     private SharedPreferencesDao sharedPreferencesDao;
-    //发送消息handler
-    private Handler mHandler;
     private CompositeDisposable compositeDisposable;
 
     private static OkHttpClient okHttpClient = new OkHttpClient();
     private static Converter.Factory gsonConverterFactory = GsonConverterFactory.create();
     private static CallAdapter.Factory rxJavaCallAdapterFactory = RxJava2CallAdapterFactory.create();
+    public interface RequestCallback{
+        void onResponse(Object object);
+        void onError();
+    }
+    private RequestCallback mRequestCallback;
 
-    public static AccountApi getLoginApi() {
+    public static AccountApi getAccountApi() {
         if (accountApi == null) {
             Retrofit retrofit = new Retrofit.Builder()
                     .client(okHttpClient)
@@ -61,61 +50,45 @@ public class AccountManagerImpl implements IAccountManager {
                     .addConverterFactory(gsonConverterFactory)
                     .addCallAdapterFactory(rxJavaCallAdapterFactory)
                     .build();
-            Log.d("jun", "【看这里】retrofit.baseUrl()"+String.valueOf(retrofit.baseUrl()));
             accountApi = retrofit.create(AccountApi.class);
         }
         return accountApi;
     }
-    public AccountManagerImpl(IHttpClient httpClient, SharedPreferencesDao sharedPreferencesDao) {
-        this.mHttpClient = httpClient;
-        this.sharedPreferencesDao = sharedPreferencesDao;
+    public AccountManagerImpl() {
+        this.sharedPreferencesDao = new SharedPreferencesDao(MyApplication.getInstance(),SharedPreferencesDao.FILE_ACCOUNT);
         compositeDisposable = new CompositeDisposable();
     }
 
-    @Override
-    public void setHandler(Handler handler) {
-        this.mHandler=handler;
-    }
+
 
     /**
      * 获取验证码
      * @param phone
      */
     @Override
-    public void fetchSMSCode(final String phone) {
-        new Thread(){
-            @Override
-            public void run() {
-                //请求验证码的参数只需要一个phone number
-                String url = API.Config.getDomain()+API.GET_SMS_CODE;
-                Log.d("jun","请求url："+url);
-                IRequest request = new BaseRequest(url);
-                request.setBody("phone",phone);
-                Log.d("jun","请求phone："+phone);
-                Log.d("jun","请求组装url："+request.getUrl());
-                BaseResponse data = (BaseResponse) mHttpClient.get(request,false);
+    public void fetchSMSCode(final String phone,RequestCallback loginCallback) {
 
-                Log.d(TAG,data.getData());
-                MsgResponse response=new Gson().fromJson(data.getData(),MsgResponse.class);
-//                Log.d("jun","请求response："+response.toString());
-                Log.d(TAG,response.getMsg());
-                if(response!=null){
-                    Log.d("jun","请求response.getMsg()："+response.getMsg());
-                }else{
-                    Log.d("jun","Response==null");
-                }
+        mRequestCallback = loginCallback;
+        compositeDisposable.add(
 
+                getAccountApi().fetchSMSCode(phone)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Consumer<BaseResponse>() {
+                            @Override
+                            public void accept(BaseResponse baseResponse) throws Exception {
+                                mRequestCallback.onResponse(baseResponse);
+                            }
+                        }, new Consumer<Throwable>() {
+                            @Override
+                            public void accept(Throwable throwable) throws Exception {
+                                Log.d("jun","fetchSMSCode throwable"+throwable);
+                                mRequestCallback.onError();
 
-                //根据response 的state code 判断是否发送成功
-                if(response.getCode()== BaseResponse.STATE_OK){
-                    Log.d("jun","response.getCode()== BaseResponse.STATE_OK   "+response.getCode());
-                    mHandler.sendEmptyMessage(SMS_SEND_SUC);
-                }else{
+                            }
+                        })
 
-                    mHandler.sendEmptyMessage(SMS_SEND_FAIL);
-                }
-            }
-        }.start();
+        );
     }
 
     /**
@@ -124,141 +97,125 @@ public class AccountManagerImpl implements IAccountManager {
      * @param smsCode
      */
     @Override
-    public void checkSmsCode(final String phone, final String smsCode) {
-        //网络请求校验验证码
-        new Thread(){
-            @Override
-            public void run() {
-                String url = API.Config.getDomain()+API.CHECK_SMS_CODE;
-                IRequest request = new BaseRequest(url);
-                request.setBody("phone",phone);
-                request.setBody("code",smsCode);
-                IResponse response = mHttpClient.get(request,false);
-                Log.d(TAG,response.getData());
-                Log.d("jun","response.getData()"+response.getData());
+    public void checkSmsCode(final String phone, final String smsCode,RequestCallback loginCallback) {
+//        //网络请求校验验证码
+        mRequestCallback = loginCallback;
+        compositeDisposable.add(
 
-                /**
-                 * response返回示例
-                 * {"code":200,"msg":"code has send"}
-                 */
+                getAccountApi().checkSmsCode(phone,smsCode)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Consumer<BaseResponse>() {
+                            @Override
+                            public void accept(BaseResponse baseResponse) throws Exception {
+                                mRequestCallback.onResponse(baseResponse);
+                            }
+                        }, new Consumer<Throwable>() {
+                            @Override
+                            public void accept(Throwable throwable) throws Exception {
+                                Log.d("jun","验证错误 throwable"+throwable);
+                                mRequestCallback.onError();
 
+                            }
+                        })
 
-                if(response.getCode() == BaseResponse.STATE_OK){
-
-                    BaseBizResponse bizRes =
-                            new Gson().fromJson(response.getData(), BaseBizResponse.class);
-                    if (bizRes.getCode() == BaseBizResponse.STATE_OK) {
-                        mHandler.sendEmptyMessage(SMS_CHECK_SUC);
-                    } else  {
-                        mHandler.sendEmptyMessage(SMS_CHECK_FAIL);
-                    }
-                }else{
-                    mHandler.sendEmptyMessage(SMS_CHECK_FAIL);
-                }
-
-            }
-        }.start();
+        );
     }
 
     @Override
-    public void checkUserExist(final String phone) {
+    public void checkUserExist( String phone,RequestCallback loginCallback) {
         // 检查用户是否存在
-        new Thread() {
-            @Override
-            public void run() {
-                String url = API.Config.getDomain() + API.CHECK_USER_EXIST;
-                IRequest request = new BaseRequest(url);
-                request.setBody("phone", phone);
-                IResponse data = mHttpClient.get(request, false);
-                Log.d(TAG, data.getData());
-                Log.d("jun", "验证用户data.getData()" + data.getData());
-                MsgVerifyResponse response = new Gson().fromJson(data.getData(), MsgVerifyResponse.class);
-                if (response.getCode() == MsgVerifyResponse.USER_EXIST) {
-                    mHandler.sendEmptyMessage(USER_EXIST);
-                } else if (response.getCode() == MsgVerifyResponse.USER_NOT_EXIST) {
-                    mHandler.sendEmptyMessage(USER_NOT_EXIST);
-                } else {
-                    mHandler.sendEmptyMessage(SERVER_FAIL);
-                }
-            }
 
-        }.start();
+
+        mRequestCallback = loginCallback;
+        compositeDisposable.add(
+
+                getAccountApi().checkUserExist(phone)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Consumer<BaseResponse>() {
+                            @Override
+                            public void accept(BaseResponse baseResponse) throws Exception {
+                                mRequestCallback.onResponse(baseResponse);
+                            }
+                        }, new Consumer<Throwable>() {
+                            @Override
+                            public void accept(Throwable throwable) throws Exception {
+                                Log.d("jun","验证错误 throwable"+throwable);
+                                mRequestCallback.onError();
+
+                            }
+                        })
+
+        );
+
     }
 
     @Override
-    public void register(final String phone,final String password) {
+    public void register(final String phone, final String password, final AccountManagerImpl.RequestCallback requestCallback) {
 
-        //开启子线程，请求网络 提交注册
-        new Thread(){
-            @Override
-            public void run() {
-                String url= API.Config.getDomain()+API.REGISTER;
-                IRequest request=new BaseRequest(url);
-                request.setBody("phone",phone);
-                request.setBody("password",password);
 
-                String uid=DevUtil.UUID(MyApplication.getInstance());
-                request.setBody("uid", uid);
+        Log.d("jun","AccountManagerImpl register");
+        mRequestCallback = requestCallback;
+        String uid= DevUtil.UUID(MyApplication.getInstance());
+        compositeDisposable.add(
 
-                IResponse response = mHttpClient.post(request, false);
-                Log.d(TAG, response.getData());
-                if (response.getCode() == BaseResponse.STATE_OK) {
-                    BaseBizResponse bizRes =
-                            new Gson().fromJson(response.getData(), BaseBizResponse.class);
-                    //注册成功
-                    if (bizRes.getCode() == BaseBizResponse.STATE_OK) {
-                        mHandler.sendEmptyMessage(REGISTER_SUC);
-                    } else {
-                        mHandler.sendEmptyMessage(SERVER_FAIL);
-                    }
-                } else {
-                    mHandler.sendEmptyMessage(SERVER_FAIL);
-                }
-            }
-        }.start();
+                getAccountApi().register(phone,password,uid)
+                        .subscribeOn(Schedulers.io())
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Consumer<BaseResponse>() {
+                            @Override
+                            public void accept(BaseResponse response) throws Exception {
+                                Log.d("jun","AccountManagerImpl register accept");
+                                mRequestCallback.onResponse(response);
+                            }
+                        }, new Consumer<Throwable>() {
+                            @Override
+                            public void accept(Throwable throwable) throws Exception {
+                                Log.d("jun","AccountManagerImpl register accept throwable"+throwable.getMessage()+"  "+throwable.getCause()+throwable.getLocalizedMessage());
+                                mRequestCallback.onError();
+
+                            }
+                        })
+
+        );
 
     }
-    public static class LoginCallback{
-        public void onResponse(LoginResponse loginResponse) {}
-        public void onError() {}
-    }
-    private LoginCallback loginCallback;
+
 
 
     @Override
-    public void login(final String phone, final String password, final LoginCallback loginCallback) {
-        this.loginCallback = loginCallback;
-//
+    public void login(final String phone, final String password, RequestCallback loginCallback) {
+        mRequestCallback = loginCallback;
+        compositeDisposable.add(
 
-
-
-
-        Disposable disposable=getLoginApi().login(new User(phone,password))
+                getAccountApi().login(phone,password)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<LoginResponse>() {
+                .subscribe(new Consumer<BaseResponse>() {
                     @Override
-                    public void accept(LoginResponse loginResponse) throws Exception {
-                        loginCallback.onResponse(loginResponse);
+                    public void accept(BaseResponse baseResponse) throws Exception {
+                        mRequestCallback.onResponse(baseResponse);
                     }
                 }, new Consumer<Throwable>() {
                     @Override
                     public void accept(Throwable throwable) throws Exception {
-                        loginCallback.onError();
+                        mRequestCallback.onError();
 
                     }
-                });
+                })
+
+        );
     }
 
     @Override
-    public void loginByToken() {
+    public void loginByToken(RequestCallback loginCallback) {
+        mRequestCallback = loginCallback;
         //用token 登录
         // 获取本地登录信息
         final Account account =
                 (Account) sharedPreferencesDao.get(SharedPreferencesDao.KEY_ACCOUNT,
                         Account.class);
-
-
         // 登录是否过期
         boolean tokenValid = false;
 
@@ -271,50 +228,31 @@ public class AccountManagerImpl implements IAccountManager {
             }
         }
         if (!tokenValid) {
-            mHandler.sendEmptyMessage(TOKEN_INVALID);
+
         } else {
-            new Thread() {
-                @Override
-                public void run() {
 
-                    String url = API.Config.getDomain() + API.LOGIN_BY_TOKEN;
-                    IRequest request = new BaseRequest(url);
-                    request.setBody("token", account.getToken());
-                    IResponse response = mHttpClient.get(request, false);
-                    Log.d(TAG, response.getData());
-                    Log.d("jun", TAG + " code:" + response.getCode() + " data:" + response.getData());
+            compositeDisposable.add(
 
-                    //请求成功
-                    if (response.getCode() == BaseResponse.STATE_OK) {
-                        Log.d("jun", "登录请求成功");
-                        LoginResponse bizRes =
-                                new Gson().fromJson(response.getData(), LoginResponse.class);
-                        Log.d("jun", TAG + " code:" + bizRes.getCode() + " data:" + bizRes.getData() + " msg:" + bizRes.getMsg());
-                        //登录成功
-                        if (bizRes.getCode() == BaseBizResponse.STATE_OK) {
-                            Log.d("jun", TAG + " 登陆成功");
-                            // 保存登录信息
-                            Account account = bizRes.getData();
-                            // todo: 加密存储
-                            SharedPreferencesDao dao =
-                                    new SharedPreferencesDao(MyApplication.getInstance(),
-                                            SharedPreferencesDao.FILE_ACCOUNT);
-                            dao.save(SharedPreferencesDao.KEY_ACCOUNT, account);
+                    getAccountApi().loginByToken(account.getToken())
+                            .subscribeOn(Schedulers.io())
+                            .observeOn(AndroidSchedulers.mainThread())
+                            .subscribe(new Consumer<BaseResponse>() {
+                                @Override
+                                public void accept(BaseResponse response) throws Exception {
+                                    Log.d("jun","AccountManagerImpl register accept success");
+                                    mRequestCallback.onResponse(response);
+                                }
+                            }, new Consumer<Throwable>() {
+                                @Override
+                                public void accept(Throwable throwable) throws Exception {
+                                    Log.d("jun","AccountManagerImpl register accept throwable"+throwable.getMessage()+"  "+throwable.getCause()+throwable.getLocalizedMessage());
+                                    mRequestCallback.onError();
 
-                            // 通知 UI
-                            mHandler.sendEmptyMessage(LOGIN_SUC);
-                        } else if (bizRes.getCode() == BaseBizResponse.STATE_TOKEN_INVALID) {
-                            mHandler.sendEmptyMessage(PW_ERROR);
+                                }
+                            })
 
-                        } else {
-                            mHandler.sendEmptyMessage(SERVER_FAIL);
-                        }
-                    } else {
-                        mHandler.sendEmptyMessage(SERVER_FAIL);
-                    }
-                }
+            );
 
-        }.start();
         }
     }
     }

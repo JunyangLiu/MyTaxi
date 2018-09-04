@@ -1,4 +1,4 @@
-package com.example.administrator.mytaxi.common.http.biz;
+package com.example.administrator.mytaxi.account.model.response;
 
 /**
  * Created by Administrator on 2018/4/17.
